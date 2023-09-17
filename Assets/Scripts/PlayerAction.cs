@@ -16,25 +16,18 @@ public class PlayerAction : MonoBehaviour
     private GameObject _currentObject;
     private Transform _parent;
     private GameObject _holdedItem;
-    //private Joint _joint;
 
     private bool _holding;
     void Start()
     {
         _holding = false;
-        //_joint = _inventoryHolder.GetComponent<FixedJoint>();
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Mouse0) && _holding)
         {
-            _holding = false;
-            _holdedItem.GetComponent<Rigidbody>().isKinematic = false;
-            _holdedItem.GetComponent<Rigidbody>().AddForce(transform.forward * _throwForce);
-            _holdedItem.transform.SetParent(_parent);
-            //_joint.connectedBody = null;
-            _holdedItem = null;
+            TryThrowItem();
         }
         var ray = _camera.ScreenPointToRay(Input.mousePosition);
 
@@ -43,54 +36,70 @@ public class PlayerAction : MonoBehaviour
             var hitObject = hitInfo.collider.gameObject;
             if (hitObject != _currentObject && _currentObject != null)
             {
-                _currentObject.GetComponent<InteractableItem>().RemoveFocus();
-                _currentObject = null;
+                TryRemoveFocus();
             }
-            
+
             var interactableItem = hitObject.GetComponent<InteractableItem>();
             if (interactableItem != null)
             {
-                _currentObject = hitObject;
-                interactableItem.SetFocus();
+                TryFocus(interactableItem, hitObject);
             }
 
-            
             if (Input.GetKeyDown(_actionKey))
             {
-                Debug.Log("pushed");
-                var component = hitObject.GetComponent<Door>();
-                if (component != null)
-                {
-                    component.SwitchDoorState();
-                }
-                
                 if (interactableItem != null)
                 {
                     Debug.Log("Interactable");
                     if (!_holding)
                     {
-                        _holding = true;
-                        _parent = hitObject.transform.parent;
-                        hitObject.transform.SetParent(_inventoryHolder.transform, false);
-                        hitObject.transform.localPosition = new Vector3(0,0,0);
-                        hitObject.GetComponent<Rigidbody>().isKinematic = true;
-                        _holdedItem = hitObject;
-                        //_joint.connectedBody = hitObject.GetComponent<Rigidbody>();
+                        PickUp(hitObject);
                     }
                     else
                     {
-                        _holdedItem.transform.SetParent(_parent);
-                        _holdedItem.GetComponent<Rigidbody>().isKinematic = false;
-                        _holdedItem = null;
-                        _parent = hitObject.transform.parent;
-                        hitObject.transform.SetParent(_inventoryHolder.transform, false);
-                        hitObject.transform.localPosition = new Vector3(0,0,0);
-                        hitObject.GetComponent<Rigidbody>().isKinematic = true;
-                        _holdedItem = hitObject;
-                        //_joint.connectedBody = null;
+                        DropItem();
+                        PickUp(hitObject);
                     }
                 }
             }
         }
     }
+
+    private void DropItem()
+    {
+        _holdedItem.transform.SetParent(_parent);
+        _holdedItem.GetComponent<Rigidbody>().isKinematic = false;
+        _holdedItem = null;
+    }
+
+    private void PickUp(GameObject pickup)
+    {
+        _holding = true;
+        _parent = pickup.transform.parent;
+        pickup.transform.SetParent(_inventoryHolder.transform, false);
+        pickup.transform.localPosition = new Vector3(0,0,0);
+        pickup.GetComponent<Rigidbody>().isKinematic = true;
+        _holdedItem = pickup;
+   
+    }
+
+    private void TryFocus(InteractableItem item, GameObject hitObject)
+    {
+         _currentObject = hitObject;
+        item.SetFocus();
+    }
+
+    private void TryRemoveFocus()
+    {
+        _currentObject.GetComponent<InteractableItem>().RemoveFocus();
+        _currentObject = null;
+    }
+
+    private void TryThrowItem()
+    {
+        _holding = false;
+        _holdedItem.GetComponent<Rigidbody>().isKinematic = false;
+        _holdedItem.GetComponent<Rigidbody>().AddForce(transform.forward * _throwForce);
+        _holdedItem.transform.SetParent(_parent);
+        _holdedItem = null;          
+     }
 }
